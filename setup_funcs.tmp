@@ -1,0 +1,313 @@
+function bindPartySizeButtons() {
+  els.partySizeButtons.forEach((button) => {
+    button.addEventListener("click", () => {});
+  });
+}
+
+function getSetupQuestionConfig() {
+  if (typeof getQuestionConfigSnapshot === "function") {
+    return getQuestionConfigSnapshot();
+  }
+
+  return {
+    mode: "auto",
+    selectedUnit: null,
+    selectedChapter: null,
+    selectedSources: [],
+    contentScope: "chapter",
+    allowQuestionTypes: {
+      zhToEn: true,
+      enToZh: true,
+      cloze: true,
+      image: true,
+    },
+  };
+}
+
+function buildContentSourceKey(unitKey, chapterKey) {
+  return `${unitKey}::${chapterKey}`;
+}
+
+function applySetupQuestionConfig({ selectedSources, allowQuestionTypes } = {}) {
+  if (typeof configureQuestionSystem !== "function") return;
+
+  const current = getSetupQuestionConfig();
+  const nextSources = Array.isArray(selectedSources) ? selectedSources : current.selectedSources;
+  const nextQuestionTypes = allowQuestionTypes
+    ? { ...current.allowQuestionTypes, ...allowQuestionTypes }
+    : current.allowQuestionTypes;
+  const firstSource = nextSources[0] || null;
+
+  configureQuestionSystem({
+    mode: "auto",
+    selectedUnit: firstSource?.unitKey || current.selectedUnit || null,
+    selectedChapter: firstSource?.chapterKey || current.selectedChapter || null,
+    selectedSources: nextSources,
+    contentScope: "chapter",
+    allowQuestionTypes: nextQuestionTypes,
+  });
+
+  renderSetupPlanner();
+}
+
+function toggleSetupContentSource(unitKey, chapterKey) {
+  const current = getSetupQuestionConfig();
+  const sourceKey = buildContentSourceKey(unitKey, chapterKey);
+  const selectedLookup = new Set(
+    (current.selectedSources || []).map((source) => buildContentSourceKey(source.unitKey, source.chapterKey))
+  );
+
+  let nextSources;
+  if (selectedLookup.has(sourceKey)) {
+    nextSources = (current.selectedSources || []).filter(
+      (source) => buildContentSourceKey(source.unitKey, source.chapterKey) !== sourceKey
+    );
+  } else {
+    nextSources = [
+      ...(current.selectedSources || []),
+      { unitKey, chapterKey },
+    ];
+  }
+
+  applySetupQuestionConfig({ selectedSources: nextSources });
+}
+
+function toggleSetupUnit(unitKey) {
+  if (typeof getContentCatalog !== "function") return;
+
+  const current = getSetupQuestionConfig();
+  const catalog = getContentCatalog();
+  const unit = catalog.find((entry) => entry.unitKey === unitKey);
+  if (!unit) return;
+
+  const availableChapters = unit.chapters
+    .filter((chapter) => chapter.wordCount > 0)
+    .map((chapter) => ({ unitKey, chapterKey: chapter.chapterKey }));
+  const selectedLookup = new Set(
+    (current.selectedSources || []).map((source) => buildContentSourceKey(source.unitKey, source.chapterKey))
+  );
+  const unitIsFullySelected = availableChapters.length > 0 && availableChapters.every((source) =>
+    selectedLookup.has(buildContentSourceKey(source.unitKey, source.chapterKey))
+  );
+
+  let nextSources = (current.selectedSources || []).filter((source) => source.unitKey !== unitKey);
+  if (!unitIsFullySelected) {
+    nextSources = [...nextSources, ...availableChapters];
+  }
+
+  applySetupQuestionConfig({ selectedSources: nextSources });
+}
+
+function selectAllSetupContent() {
+  if (typeof getDefaultSelectedSources !== "function") return;
+  applySetupQuestionConfig({ selectedSources: getDefaultSelectedSources() });
+}
+
+function clearSetupContent() {
+  applySetupQuestionConfig({ selectedSources: [] });
+}
+
+function toggleSetupQuestionType(typeKey) {
+  const current = getSetupQuestionConfig();
+  const currentValue = Boolean(current.allowQuestionTypes?.[typeKey]);
+
+  applySetupQuestionConfig({
+    allowQuestionTypes: {
+      [typeKey]: !currentValue,
+    },
+  });
+}
+
+function renderSetupPlanner() {
+  if (!els.contentPickerGrid || typeof getContentCatalog !== "function") return;
+
+  const catalog = getContentCatalog();
+  const current = getSetupQuestionConfig();
+  const selectedLookup = new Set(
+    (current.selectedSources || []).map((source) => buildContentSourceKey(source.unitKey, source.chapterKey))
+  );
+  const selectedCatalogEntries = [];
+  let selectedWordCount = 0;
+
+  catalog.forEach((unit) => {
+    unit.chapters.forEach((chapter) => {
+      if (!selectedLookup.has(buildContentSourceKey(unit.unitKey, chapter.chapterKey))) return;
+      selectedCatalogEntries.push({
+        unitKey: unit.unitKey,
+        unitLabel: unit.unitLabel,
+        chapterKey: chapter.chapterKey,
+        chapterLabel: chapter.chapterLabel,
+        wordCount: chapter.wordCount,
+      });
+      selectedWordCount += chapter.wordCount;
+    });
+  });
+
+  if (els.contentSelectionCount) {
+    const selectedCount = selectedCatalogEntries.length;
+    els.contentSelectionCount.textContent = `${selectedCount} ${selectedCount === 1 ? "chapter" : "chapters"} selected`;
+  }
+
+  if (els.contentWordCount) {
+    els.contentWordCount.textContent = `${selectedWordCount} words ready`;
+  }
+
+  els.contentPickerGrid.innerHTML = catalog.map((unit) => {
+    const selectableChapters = unit.chapters.filter((chapter) => chapter.wordCount > 0);
+    const selectedCount = selectableChapters.filter((chapter) =>
+      selectedLookup.has(buildContentSourceKey(unit.unitKey, chapter.chapterKey))
+    ).length;
+    const unitIsFullySelected = selectableChapters.length > 0 && selectedCount === selectableChapters.length;
+
+    return `
+      <section class="content-unit-card ${unit.totalWords === 0 ? "is-empty" : ""}">
+        <div class="content-unit-header">
+          <div>
+            <h4>${unit.unitLabel}</h4>
+            <p>${selectedCount}/${selectableChapters.length || 0} chapters ready</p>
+          </div>
+          <button
+            type="button"
+            class="content-unit-toggle"
+            data-unit-toggle="${unit.unitKey}"
+            ${selectableChapters.length ? "" : "disabled"}
+          >
+            ${unitIsFullySelected ? "Clear Unit" : "Select Unit"}
+          </button>
+        </div>
+        <div class="content-chapter-list">
+          ${unit.chapters.map((chapter) => {
+            const isSelected = selectedLookup.has(buildContentSourceKey(unit.unitKey, chapter.chapterKey));
+            const isEmpty = chapter.wordCount === 0;
+            return `
+              <button
+                type="button"
+                class="content-chip ${isSelected ? "selected" : ""} ${isEmpty ? "is-disabled" : ""}"
+                data-unit-key="${unit.unitKey}"
+                data-chapter-key="${chapter.chapterKey}"
+                ${isEmpty ? "disabled" : ""}
+              >
+                <span class="content-chip-title">${chapter.chapterLabel}</span>
+                <span class="content-chip-meta">${isEmpty ? "No words yet" : `${chapter.wordCount} words`}</span>
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  }).join("");
+
+  els.contentPickerGrid.querySelectorAll("[data-unit-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleSetupUnit(button.dataset.unitToggle);
+    });
+  });
+
+  els.contentPickerGrid.querySelectorAll("[data-unit-key][data-chapter-key]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleSetupContentSource(button.dataset.unitKey, button.dataset.chapterKey);
+    });
+  });
+
+  if (els.questionTypePicker) {
+    const questionTypes = [
+      {
+        key: "zhToEn",
+        title: "Chinese to English",
+        desc: "Show Chinese first and answer in English.",
+      },
+      {
+        key: "enToZh",
+        title: "English to Chinese",
+        desc: "Show English first and answer in Chinese.",
+      },
+      {
+        key: "cloze",
+        title: "Sentence Cloze",
+        desc: "Fill in the missing word from a sentence.",
+      },
+      {
+        key: "image",
+        title: "Picture Match",
+        desc: "Use the vocabulary image as the prompt.",
+      },
+    ];
+
+    els.questionTypePicker.innerHTML = questionTypes.map((type) => {
+      const isActive = Boolean(current.allowQuestionTypes?.[type.key]);
+      return `
+        <button
+          type="button"
+          class="question-type-card ${isActive ? "active" : ""}"
+          data-question-type="${type.key}"
+        >
+          <span class="question-type-title">${type.title}</span>
+          <span class="question-type-desc">${type.desc}</span>
+        </button>
+      `;
+    }).join("");
+
+    els.questionTypePicker.querySelectorAll("[data-question-type]").forEach((button) => {
+      button.addEventListener("click", () => {
+        toggleSetupQuestionType(button.dataset.questionType);
+      });
+    });
+  }
+
+  if (els.selectedContentTags) {
+    els.selectedContentTags.innerHTML = selectedCatalogEntries.length
+      ? selectedCatalogEntries.map((entry) => `
+          <button
+            type="button"
+            class="selected-content-tag"
+            data-unit-key="${entry.unitKey}"
+            data-chapter-key="${entry.chapterKey}"
+            title="Remove ${entry.unitLabel} ${entry.chapterLabel}"
+          >
+            <span>${entry.unitLabel}</span>
+            <strong>${entry.chapterLabel}</strong>
+          </button>
+        `).join("")
+      : '<div class="selected-content-empty">No chapters selected yet.</div>';
+
+    els.selectedContentTags.querySelectorAll("[data-unit-key][data-chapter-key]").forEach((button) => {
+      button.addEventListener("click", () => {
+        toggleSetupContentSource(button.dataset.unitKey, button.dataset.chapterKey);
+      });
+    });
+  }
+
+  const enabledQuestionTypeCount = Object.values(current.allowQuestionTypes || {}).filter(Boolean).length;
+  if (els.toCharacterSelectBtn) {
+    els.toCharacterSelectBtn.disabled = selectedCatalogEntries.length === 0 || selectedWordCount < 4 || enabledQuestionTypeCount === 0;
+  }
+}
+
+function handleSetupContinue() {
+  const current = getSetupQuestionConfig();
+  const selectedSources = current.selectedSources || [];
+  const enabledQuestionTypeCount = Object.values(current.allowQuestionTypes || {}).filter(Boolean).length;
+  const selectedWordCount = selectedSources.reduce((sum, source) => {
+    const chapterWords = vocabData?.[source.unitKey]?.[source.chapterKey];
+    return sum + (Array.isArray(chapterWords) ? chapterWords.length : 0);
+  }, 0);
+
+  if (!selectedSources.length) {
+    openEventModal("Choose at least one chapter before recruiting heroes.");
+    return;
+  }
+
+  if (selectedWordCount < 4) {
+    openEventModal("Choose at least four words of content so the question deck has enough answers.");
+    return;
+  }
+
+  if (!enabledQuestionTypeCount) {
+    openEventModal("Enable at least one question type before continuing.");
+    return;
+  }
+
+  setScreen("characterSelect");
+}
+
+function bindCharacterButtons

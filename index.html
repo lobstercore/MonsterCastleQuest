@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monster Castle Quest</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <section id="logoIntroOverlay" class="logo-intro-overlay" aria-hidden="true">
+      <img
+        class="logo-intro-image"
+        src="./img/UI/mrAndyLogo.png"
+        alt="Mr. Andy"
+      />
+    </section>
+
+    <!-- Splash / title layer -->
+    <section id="splashScreen" class="screen active">
+      <div class="splash-scene" aria-hidden="true">
+        <div class="splash-haze splash-haze-top"></div>
+        <div class="splash-fog splash-fog-back"></div>
+        <div class="splash-fog splash-fog-mid"></div>
+        <div class="splash-fog splash-fog-front"></div>
+        <div class="splash-mist splash-mist-left"></div>
+        <div class="splash-mist splash-mist-right"></div>
+        <div class="splash-glow"></div>
+      </div>
+
+      <div class="splash-inner">
+        <img
+          class="splash-logo"
+          src="./img/title/logo.png"
+          alt="Monster Castle Quest"
+        />
+        <p class="splash-tagline">Battle monsters. Claim treasure. Master new words.</p>
+        <button id="enterSetupBtn" class="title-start-btn" type="button" aria-label="Begin Adventure">
+          <img class="title-start-img" src="./img/title/button.png" alt="" />
+        </button>
+      </div>
+    </section>
+
+    <!-- Setup screen -->
+    <section id="setupScreen" class="screen hidden">
+      <header class="screen-header planning-header">
+        <h2>Adventure Planning</h2>
+        <p>Choose the word sets and question styles your party will face in the castle.</p>
+      </header>
+
+      <div class="planning-layout">
+        <section class="setup-panel planning-content-panel">
+          <div class="planning-panel-header">
+            <div>
+              <h3>Content Picker</h3>
+              <p class="setup-note">Mix and match any chapters you want in the next adventure.</p>
+            </div>
+            <div class="planning-summary">
+              <div id="contentSelectionCount" class="planning-summary-value">0 chapters</div>
+              <div id="contentWordCount" class="planning-summary-subvalue">0 words ready</div>
+            </div>
+          </div>
+
+          <div class="planning-toolbar">
+            <button id="selectAllContentBtn" type="button" class="setup-btn planning-toolbar-btn">Select All</button>
+            <button id="clearContentBtn" type="button" class="setup-btn planning-toolbar-btn">Clear</button>
+          </div>
+
+          <div id="contentPickerGrid" class="content-picker-grid"></div>
+        </section>
+
+        <aside class="planning-sidebar">
+          <section class="setup-panel planning-settings-panel">
+            <h3>Audio</h3>
+            <p class="setup-note">Set music and sound effect levels before the adventure begins.</p>
+            <div id="setupAudioControls" class="setup-audio-controls"></div>
+            <div id="questionTypePicker" class="question-type-list hidden" aria-hidden="true"></div>
+          </section>
+
+          <section class="setup-panel planning-selection-panel">
+            <h3>Selected Sets</h3>
+            <div id="selectedContentTags" class="selected-content-tags"></div>
+          </section>
+        </aside>
+      </div>
+
+      <footer class="screen-footer">
+        <button id="toCharacterSelectBtn" class="primary-btn">Choose Adventurers</button>
+      </footer>
+    </section>
+
+    <!-- Character select screen -->
+    <section id="characterSelectScreen" class="screen hidden">
+      <header class="screen-header">
+        <h2>Choose Your Adventurers</h2>
+        <p>Pick 4 heroes for the quest</p>
+      </header>
+
+      <div id="characterRoster" class="character-roster"></div>
+
+      <div class="selected-party-panel">
+        <h3>Selected Party</h3>
+        <div id="selectedParty" class="selected-party-slots"></div>
+      </div>
+
+      <footer class="screen-footer">
+        <button id="startAdventureBtn" class="primary-btn">Begin Adventure</button>
+      </footer>
+    </section>
+
+    <!-- Main adventure screen -->
+    <section id="adventureScreen" class="screen hidden">
+      <header id="topBar">
+        <div class="topbar-left">
+          <button id="optionsBtn" class="topbar-icon-btn" type="button" title="Options">
+            <img src="./img/icons/options.png" alt="Options" class="topbar-icon-img" />
+          </button>
+          <button id="soundBtn" class="topbar-icon-btn" type="button" title="Sound">
+            <img src="./img/icons/sound.png" alt="Sound" class="topbar-icon-img" />
+          </button>
+        </div>
+
+        <div class="topbar-center">
+          <div id="areaTitle">Castle Entrance</div>
+        </div>
+
+        <div class="topbar-right">
+          <div id="levelStats" class="level-stats" aria-label="Floor progress">
+            <div id="partyKeyring" class="party-keyring" aria-label="Party keys">
+              <span class="party-keyring-label">Keys:</span>
+              <div id="partyKeySlots" class="party-keyring-slots" aria-live="polite"></div>
+            </div>
+            <div
+              id="monsterStat"
+              class="level-stat level-stat-monsters is-alert"
+              title="Monsters remaining"
+            >
+              <span class="level-stat-icon" aria-hidden="true"><img src="./img/icons/monsters.png" alt="" class="level-stat-icon-img" /></span>
+              <span id="monstersRemaining" class="level-stat-value">0</span>
+            </div>
+            <div
+              id="chestStat"
+              class="level-stat level-stat-chests is-active"
+              title="Treasure chests remaining"
+            >
+              <span class="level-stat-icon" aria-hidden="true"><img src="./img/icons/treasure_chest.png" alt="" class="level-stat-icon-img" /></span>
+              <span id="chestsRemaining" class="level-stat-value">0</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main id="gameLayout">
+        <!-- Left player cards -->
+        <aside id="leftPartyColumn" class="party-column">
+          <article class="player-card" data-player="0">
+            <div class="player-header">
+              <img class="player-portrait" src="./img/heroes/fighter.png" alt="Player 1" />
+              <div class="player-name">Player 1</div>
+            </div>
+            <div class="player-stats">
+              <div class="stat hearts"><img class="ui-inline-icon stat-icon" src="./img/icons/heart.png" alt="" /> 5</div>
+              <div class="stat gold">💰 0</div>
+            </div>
+            <div class="player-items">Items: —</div>
+          </article>
+
+          <article class="player-card" data-player="1">
+            <div class="player-header">
+              <img class="player-portrait" src="./img/heroes/wizard.png" alt="Player 2" />
+              <div class="player-name">Player 2</div>
+            </div>
+            <div class="player-stats">
+              <div class="stat hearts"><img class="ui-inline-icon stat-icon" src="./img/icons/heart.png" alt="" /> 5</div>
+              <div class="stat gold">💰 0</div>
+            </div>
+            <div class="player-items">Items: —</div>
+          </article>
+        </aside>
+
+        <!-- Center adventure area -->
+        <section id="adventureArea">
+          <div id="roomStage">
+            <div id="roomBackground"></div>
+            <div id="roomDetritusLayer" class="room-detritus-layer" aria-hidden="true"></div>
+
+            <!-- Explore objects -->
+            <button class="room-object monster">
+              <img class="room-monster-img" src="./img/monsters/slime.png" alt="Monster" />
+              <span class="room-object-label">Monster</span>
+              <span class="room-monster-hp"><img class="ui-inline-icon room-hp-icon" src="./img/icons/heart.png" alt="" /> <span>3</span></span>
+            </button>
+            <button class="room-object chest">
+              <img class="room-object-img chest-img" src="./img/objects/treasure-chest.png" alt="Chest" />
+              <span class="room-object-label">Chest</span>
+            </button>
+            <button class="room-object door north-door">
+              <img src="./img/objects/door_1_closed.png" class="door-img" alt="North Door">
+            </button>
+            <button class="room-object door west-door">
+              <img src="./img/objects/door_2_closed.png" class="door-img" alt="West Door">
+            </button>
+            <button class="room-object door east-door">
+              <img src="./img/objects/door_3_closed.png" class="door-img" alt="East Door">
+            </button>
+            <button class="room-object door south-door">
+              <img src="./img/objects/door_1_closed.png" class="door-img" alt="South Door">
+            </button>
+            <button class="room-object blocked-entry blocked-entry-south">
+              <img class="blocked-entry-img" src="./img/objects/gate_sealed.png" alt="Sealed way back">
+            </button>
+            <button id="shop" class="room-object shop">
+              <img class="shop-img" src="./img/objects/shop.png" alt="Shop">
+            </button>
+            <button class="room-object stairs">
+              <img class="stairs-img" src="./img/objects/stairs_down_1.png" alt="Stairs Down">
+            </button>
+
+            <!-- Party tokens in room -->
+            <div id="partyTokenLayer">
+              <div class="party-token token-1" data-token-player="0">
+                <img class="party-token-img" src="./img/heroes/fighter.png" alt="Player 1" />
+              </div>
+              <div class="party-token token-2" data-token-player="1">
+                <img class="party-token-img" src="./img/heroes/wizard.png" alt="Player 2" />
+              </div>
+              <div class="party-token token-3" data-token-player="2">
+                <img class="party-token-img" src="./img/heroes/elf.png" alt="Player 3" />
+              </div>
+              <div class="party-token token-4" data-token-player="3">
+                <img class="party-token-img" src="./img/heroes/witch.png" alt="Player 4" />
+              </div>
+            </div>
+
+            <!-- Battle overlay: covers ONLY roomStage -->
+            <div id="battleOverlay" class="battle-overlay hidden">
+              <div id="battleFxLayer" class="battle-fx-layer" aria-hidden="true"></div>
+              <div class="battle-scene party-battle-scene">
+                <div class="battle-party-panel">
+                  <h3>Party</h3>
+                  <div id="battlePartyRow" class="battle-party-row">
+                    <div class="battle-party-unit" data-battle-player="0">
+                      <img
+                        class="battle-unit-img"
+                        data-battle-img="0"
+                        src="./img/heroes/fighter.png"
+                        alt="Fighter"
+                      />
+                      <div class="battle-unit-name" data-battle-name="0">Fighter</div>
+                      <div class="battle-unit-hp" data-battle-hp="0"><img class="ui-inline-icon battle-hp-icon" src="./img/icons/heart.png" alt="" /> <span>5 / 5</span></div>
+                    </div>
+
+                    <div class="battle-party-unit" data-battle-player="1">
+                      <img
+                        class="battle-unit-img"
+                        data-battle-img="1"
+                        src="./img/heroes/wizard.png"
+                        alt="Wizard"
+                      />
+                      <div class="battle-unit-name" data-battle-name="1">Wizard</div>
+                      <div class="battle-unit-hp" data-battle-hp="1"><img class="ui-inline-icon battle-hp-icon" src="./img/icons/heart.png" alt="" /> <span>5 / 5</span></div>
+                    </div>
+
+                    <div class="battle-party-unit" data-battle-player="2">
+                      <img
+                        class="battle-unit-img"
+                        data-battle-img="2"
+                        src="./img/heroes/elf.png"
+                        alt="Elf"
+                      />
+                      <div class="battle-unit-name" data-battle-name="2">Elf</div>
+                      <div class="battle-unit-hp" data-battle-hp="2"><img class="ui-inline-icon battle-hp-icon" src="./img/icons/heart.png" alt="" /> <span>5 / 5</span></div>
+                    </div>
+
+                    <div class="battle-party-unit" data-battle-player="3">
+                      <img
+                        class="battle-unit-img"
+                        data-battle-img="3"
+                        src="./img/heroes/witch.png"
+                        alt="Witch"
+                      />
+                      <div class="battle-unit-name" data-battle-name="3">Witch</div>
+                      <div class="battle-unit-hp" data-battle-hp="3"><img class="ui-inline-icon battle-hp-icon" src="./img/icons/heart.png" alt="" /> <span>5 / 5</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="battle-center-panel">
+                  <div id="battleTimerContainer">
+                      <div id="battleTimerBar"></div>
+                  </div>
+                  <div class="battle-vs">VS</div>
+                  <div id="battleStatusText" class="battle-status-text">A monster appears!</div>
+                </div>
+
+                <div class="battle-monster-panel">
+                  <h3>Monster</h3>
+                  <div id="battleMonsterCard" class="battle-monster-card">
+
+                    <img
+                      id="battleMonsterImg"
+                      class="battle-monster-img"
+                      src="./img/monsters/slime.png"
+                      alt="Slime"
+                    />
+                    <div id="battleMonsterName" class="battle-name">Slime</div>
+                    <div id="battleMonsterHp" class="battle-hp"><img class="ui-inline-icon battle-hp-icon" src="./img/icons/heart.png" alt="" /> <span>3 / 3</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="chestLockOverlay" class="chest-lock-overlay hidden" aria-hidden="true">
+              <div class="chest-lock-shell">
+                <div class="chest-lock-header">
+                  <div id="chestLockStatusText" class="chest-lock-status-text">Line up the letters to unlock the chest.</div>
+                  <div id="chestLockTimerContainer" class="chest-lock-timer-container">
+                    <div id="chestLockTimerBar" class="chest-lock-timer-bar"></div>
+                  </div>
+                </div>
+
+                <div class="chest-lock-layout">
+                  <div class="chest-lock-hint-panel">
+                    <div class="chest-lock-panel-title">Hint</div>
+                    <div class="chest-lock-hint-stage">
+                      <img id="chestLockHintImg" class="chest-lock-hint-img" src="" alt="Word hint" />
+                    </div>
+                  </div>
+
+                  <div class="chest-lock-wheels-panel">
+                    <div class="chest-lock-panel-title">Lock</div>
+                    <div id="chestLockWheels" class="chest-lock-wheels" aria-live="polite"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right player cards -->
+        <aside id="rightPartyColumn" class="party-column">
+          <article class="player-card" data-player="2">
+            <div class="player-header">
+              <img class="player-portrait" src="./img/heroes/elf.png" alt="Player 3" />
+              <div class="player-name">Player 3</div>
+            </div>
+            <div class="player-stats">
+              <div class="stat hearts"><img class="ui-inline-icon stat-icon" src="./img/icons/heart.png" alt="" /> 5</div>
+              <div class="stat gold">💰 0</div>
+            </div>
+            <div class="player-items">Items: —</div>
+          </article>
+
+          <article class="player-card" data-player="3">
+            <div class="player-header">
+              <img class="player-portrait" src="./img/heroes/witch.png" alt="Player 4" />
+              <div class="player-name">Player 4</div>
+            </div>
+            <div class="player-stats">
+              <div class="stat hearts"><img class="ui-inline-icon stat-icon" src="./img/icons/heart.png" alt="" /> 5</div>
+              <div class="stat gold">💰 0</div>
+            </div>
+            <div class="player-items">Items: —</div>
+          </article>
+        </aside>
+      </main>
+
+      <!-- Bottom question panel -->
+      <section id="questionPanel">
+        <div id="questionPrompt"></div>
+        <div id="answerChoices"></div>
+      </section>
+    </section>
+
+    <!-- Event modal -->
+    <div id="eventModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content event-modal-shell">
+        <div class="event-modal-scroll">
+          <h3>Event</h3>
+          <div class="event-modal-message">
+            <p>Something happened.</p>
+          </div>
+          <button id="closeEventBtn">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div id="shopModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-content shop-modal-content">
+    <h3>Shop</h3>
+    <p id="shopPlayerInfo">Player shop info</p>
+
+    <div id="shopItemList" class="shop-item-list"></div>
+
+    <div class="shop-modal-footer">
+      <button id="closeShopBtn">Leave Shop</button>
+    </div>
+  </div>
+</div>
+
+<div id="inventoryModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-content inventory-modal-content">
+    <div class="inventory-modal-header">
+      <div>
+        <h3>Inventory</h3>
+        <p id="inventoryPlayerInfo">Choose an item to manage.</p>
+      </div>
+      <button id="closeInventoryBtn" type="button">Close</button>
+    </div>
+
+    <div id="inventoryItemList" class="inventory-item-list"></div>
+
+    <div id="inventoryTradePanel" class="inventory-trade-panel hidden">
+      <div class="inventory-trade-title">Trade To Who?</div>
+      <div id="inventoryTradeTargets" class="inventory-trade-targets"></div>
+    </div>
+
+    <div class="inventory-modal-footer">
+      <button id="inventoryDropBtn" type="button" class="inventory-action-btn">
+        <img src="./img/icons/drop_item.png" alt="" class="inventory-action-icon" />
+        <span>Drop Item</span>
+      </button>
+      <button id="inventoryTradeBtn" type="button" class="inventory-action-btn">
+        <img src="./img/icons/trade_item.png" alt="" class="inventory-action-icon" />
+        <span>Trade Item</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="inventoryConfirmModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-content inventory-confirm-content">
+    <h3>Drop Item?</h3>
+    <p id="inventoryConfirmText">Are you sure you want to drop this item?</p>
+    <div class="inventory-confirm-actions">
+      <button id="inventoryConfirmDropBtn" type="button">Drop</button>
+      <button id="inventoryCancelDropBtn" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="chestRewardModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-content inventory-modal-content chest-reward-content">
+    <div class="inventory-modal-header chest-reward-header">
+      <div>
+        <h3>Chest Reward</h3>
+        <p id="chestRewardSummary">A treasure item was found in the chest.</p>
+      </div>
+    </div>
+
+    <div class="chest-reward-item-card">
+      <img id="chestRewardItemImg" class="inventory-item-img chest-reward-item-img" src="./img/items/potion_small.png" alt="Reward item" />
+      <div class="inventory-item-meta">
+        <div id="chestRewardItemName" class="inventory-item-name">Small Healing Potion</div>
+        <div id="chestRewardItemDesc" class="inventory-item-desc">Heal 1 heart</div>
+      </div>
+    </div>
+
+    <div class="inventory-trade-panel chest-reward-panel">
+      <div class="inventory-trade-title">Who gets the item?</div>
+      <div id="chestRewardTargets" class="inventory-trade-targets"></div>
+    </div>
+  </div>
+</div>
+
+<div id="phoenixFeatherModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-content inventory-modal-content chest-reward-content">
+    <div class="inventory-modal-header chest-reward-header">
+      <div>
+        <h3>Phoenix Feather</h3>
+        <p id="phoenixFeatherSummary">Choose a fallen ally to revive.</p>
+      </div>
+      <button type="button" onclick="closePhoenixFeatherModal()">Cancel</button>
+    </div>
+
+    <div class="chest-reward-item-card">
+      <img class="inventory-item-img chest-reward-item-img" src="./img/items/phoenix_feather.png" alt="Phoenix Feather" />
+      <div class="inventory-item-meta">
+        <div class="inventory-item-name">Phoenix Feather</div>
+        <div class="inventory-item-desc">Revive one fallen ally with 1 heart.</div>
+      </div>
+    </div>
+
+    <div class="inventory-trade-panel chest-reward-panel">
+      <div class="inventory-trade-title">Who returns to battle?</div>
+      <div id="phoenixFeatherTargets" class="inventory-trade-targets"></div>
+    </div>
+  </div>
+</div>
+
+<div id="optionsModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-content utility-modal-content">
+    <h3>Options</h3>
+    <div class="utility-modal-actions">
+      <button id="optionsMainMenuBtn" type="button">Main Menu</button>
+      <button id="optionsRestartBtn" type="button">Restart Game</button>
+      <button id="closeOptionsBtn" type="button">Exit</button>
+    </div>
+  </div>
+</div>
+
+<div id="soundModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-content utility-modal-content">
+    <h3>Sound</h3>
+    <div class="utility-modal-actions">
+      <button id="toggleMusicBtn" type="button">Music: On</button>
+      <button id="toggleSfxBtn" type="button">SFX: On</button>
+      <button id="closeSoundBtn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game Ending Modal -->
+<div id="gameEndModal" class="modal hidden">
+  <div class="modal-content">
+    <h2 id="gameEndTitle">Game Over</h2>
+    <p id="gameEndMessage">Your party was defeated...</p>
+    <button id="restartGameBtn">Start New Adventure</button>
+  </div>
+</div>
+
+<div id="vignetteModal" class="modal hidden">
+  <div class="vignette-shell">
+    <div id="vignetteStage" class="vignette-stage">
+      <img id="vignetteBg" class="vignette-bg hidden" alt="">
+      <img id="vignetteBgOverlay" class="vignette-bg vignette-bg-overlay hidden" alt="">
+      <img id="vignetteImgA" class="vignette-actor actor-a hidden" alt="">
+      <img id="vignetteImgB" class="vignette-actor actor-b hidden" alt="">
+      <div id="vignettePartyLayer" class="vignette-party-layer hidden"></div>
+      <div id="vignetteCredits" class="vignette-credits hidden" aria-hidden="true"></div>
+      <div id="vignetteFlash" class="vignette-flash hidden"></div>
+    </div>
+
+    <div class="vignette-text-wrap">
+      <p id="vignetteText" class="vignette-text"></p>
+    </div>
+
+    <div class="vignette-controls">
+      <button id="vignetteSkipBtn" type="button">Skip</button>
+    </div>
+  </div>
+</div>
+
+  <!-- Load data FIRST -->
+  <script src="./data/vocabData.js"></script>
+  <script src="./data/sentenceData.js"></script>
+
+  <!-- Then question system -->
+  <script src="questions.js"></script>
+  <script src="AudioManager.js"></script>
+  <script src="vignettes.js"></script>
+
+  <!-- Then main game -->
+  <script src="script.js"></script>
+  <script src="items-shop.js"></script>
+  <script src="rooms.js"></script>
+  <script src="battle.js"></script>
+</body>
+</html>
+
